@@ -1,0 +1,21 @@
+[package]
+name = "rasp_attack_harness"
+version = "0.1.0"
+edition = "2021"
+[lib]
+# This is the crucial line. It tells Rust to build a .so file
+# that C/JNI can understand.
+crate-type = ["cdylib"]
+[dependencies]
+# The main crate for JNI bindings
+jni = "0.21.1"
+# A crate for safe bindings to low-level Unix APIs (like ptrace)
+nix = { version = "0.27.1", features = ["ptrace"] }
+# A crate for direct C function bindings (the 'unsafe' alternative)
+libc = "0.2.153"
+# PLT hooking crate
+plt-rs = "0.3.1"
+# For error handling in examples
+anyhow = "1.0"
+# Android logging crate
+android_log = "0.1"
