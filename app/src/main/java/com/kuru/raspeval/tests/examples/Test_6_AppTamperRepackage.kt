@@ -5,15 +5,16 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Base64
 import com.kuru.raspeval.core.ManagedTestCase
-import com.kuru.raspeval.core.Priority
-import com.kuru.raspeval.core.TestLayer
-import com.kuru.raspeval.core.TestRequirement
-import com.kuru.raspeval.core.TestResult
+import com.kuru.raspeval.core.RASPPriority
+import com.kuru.raspeval.core.RASPAttackLayer
+import com.kuru.raspeval.core.RASPAttackRequirement
+import com.kuru.raspeval.core.RASPAttackResult
 import java.security.MessageDigest
 
 class Test_6_AppTamperRepackage : ManagedTestCase() {
-    override val requirement = TestRequirement("6", "Group 1", "App Tamper/Repackage", Priority.P2, TestLayer.MANAGED)
-    override suspend fun execute(context: Context): TestResult {
+    override val requirement =
+        RASPAttackRequirement("6", "Group 1", "App Tamper/Repackage", RASPPriority.P2, RASPAttackLayer.MANAGED)
+    override suspend fun execute(context: Context): RASPAttackResult {
         return try {
             val packageName = context.packageName
             val packageManager = context.packageManager
@@ -26,13 +27,13 @@ class Test_6_AppTamperRepackage : ManagedTestCase() {
             }
 
             val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo.signingInfo.apkContentsSigners
+                packageInfo.signingInfo?.apkContentsSigners
             } else {
                 packageInfo.signatures
             }
 
             if (signatures.isNullOrEmpty()) {
-                return TestResult.Fail("Could not retrieve app signature.", "Signature list is null or empty.")
+                return RASPAttackResult.Fail("Could not retrieve app signature.", "Signature list is null or empty.")
             }
 
             // For simplicity, we check the first signature. A robust implementation would check all of them.
@@ -47,15 +48,15 @@ class Test_6_AppTamperRepackage : ManagedTestCase() {
             val expectedSignatureHash = "YOUR_RELEASE_SIGNATURE_SHA256_HASH"
 
             if (currentSignatureHash == expectedSignatureHash) {
-                TestResult.Pass("App signature is valid.")
+                RASPAttackResult.Pass("App signature is valid.")
             } else {
-                TestResult.Fail(
+                RASPAttackResult.Fail(
                     reason = "App signature mismatch. The app may have been tampered with or repackaged.",
                     details = "Expected hash: $expectedSignatureHash, but got: $currentSignatureHash"
                 )
             }
         } catch (e: Exception) {
-            TestResult.Error(e)
+            RASPAttackResult.Error(e)
         }
     }
 }

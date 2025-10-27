@@ -1,9 +1,9 @@
 package com.kuru.raspeval.core
 
-data class TestRequirement(
+data class RASPAttackRequirement(
     val id: String,
     val group: String,
     val scenario: String,
-    val priority: Priority,
-    val layer: TestLayer
+    val RASPPriority: RASPPriority,
+    val layer: RASPAttackLayer
 )

@@ -2,10 +2,10 @@ package com.kuru.raspeval.tests.examples
 
 import android.content.Context
 import com.kuru.raspeval.core.NativeTestCase
-import com.kuru.raspeval.core.Priority
-import com.kuru.raspeval.core.TestLayer
-import com.kuru.raspeval.core.TestRequirement
-import com.kuru.raspeval.core.TestResult
+import com.kuru.raspeval.core.RASPPriority
+import com.kuru.raspeval.core.RASPAttackLayer
+import com.kuru.raspeval.core.RASPAttackRequirement
+import com.kuru.raspeval.core.RASPAttackResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -15,15 +15,15 @@ import kotlinx.coroutines.withContext
  * A RASP solution should block this.
  */
 class Test_55_LowLevelNativeCallInterception : NativeTestCase() {
-    override val requirement = TestRequirement(
+    override val requirement = RASPAttackRequirement(
         id = "55",
         group = "Group 6",
         scenario = "Low-Level Native Call Interception",
-        priority = Priority.P1,
-        layer = TestLayer.NATIVE_HOOKING
+        RASPPriority = RASPPriority.P1,
+        layer = RASPAttackLayer.NATIVE_HOOKING
     )
 
-    override suspend fun execute(context: Context): TestResult = withContext(Dispatchers.IO) {
+    override suspend fun execute(context: Context): RASPAttackResult = withContext(Dispatchers.IO) {
         try {
             // Attempt to hook 'open' in libc.so
             val libName = "libc.so"
@@ -31,18 +31,18 @@ class Test_55_LowLevelNativeCallInterception : NativeTestCase() {
             val resultCode = attemptGotHook(libName, symbolName)
             if (resultCode == 0) {
                 // mprotect succeeded
-                TestResult.Fail(
+                RASPAttackResult.Fail(
                     reason = "Attack Succeeded: PLT page made writable.",
                     details = "The native 'attemptGotHook' function returned 0, indicating RASP did not block the hooking attempt."
                 )
             } else {
                 // mprotect failed
-                TestResult.Pass(
+                RASPAttackResult.Pass(
                     message = "Attack Blocked: PLT page protection change failed with code $resultCode."
                 )
             }
         } catch (e: Exception) {
-            TestResult.Error(e)
+            RASPAttackResult.Error(e)
         }
     }
 }

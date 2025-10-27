@@ -11,13 +11,13 @@ sealed interface RaspTestCase {
     /**
      * The requirement metadata this test case validates.
      */
-    val requirement: TestRequirement
+    val requirement: RASPAttackRequirement
     /**
      * Executes the test logic.
      * @param context The Android Context, needed for most tests.
-     * @return A [TestResult] (Pass, Fail, Skipped, Error).
+     * @return A [RASPAttackResult] (Pass, Fail, Skipped, Error).
      */
-    suspend fun execute(context: Context): TestResult
+    suspend fun execute(context: Context): RASPAttackResult
 }
 /**
  * A base class for tests that operate purely in the
