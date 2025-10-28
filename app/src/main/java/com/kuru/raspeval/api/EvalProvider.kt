@@ -1,9 +1,7 @@
-package com.kuru.raspeval.core
-
+package com.kuru.raspeval.api
 
 import android.content.Context
 import com.kuru.raspeval.attacks.AttackDefinition
-import com.kuru.raspeval.core.AttackResult
 import com.kuru.raspeval.core.CorrelatedThreat
 import com.kuru.raspeval.core.EvalDomainEntity
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +15,7 @@ import kotlinx.coroutines.launch
  * @param context The application context.
  * @param externalScope The CoroutineScope from the consuming app, used to launch attacks.
  */
-class RaspEvalProvider(
+class EvalProvider(
     private val context: Context,
     private val externalScope: CoroutineScope
 ) {
@@ -29,16 +27,13 @@ class RaspEvalProvider(
      * API 1: Initiates a list of attack simulations.
      * Attacks are run sequentially in a coroutine on the [externalScope].
      *
-     * @param attacks A list of [AttackDefinition] objects to execute.
-     * @return A [Flow] that emits the result of each simulation as it completes.
+     * @param attacks A list of [com.kuru.raspeval.attacks.AttackDefinition] objects to execute.
+     * @return A [kotlinx.coroutines.flow.Flow] that emits the result of each simulation as it completes.
      */
     fun initiateAttacks(attacks: List<AttackDefinition>) {
         externalScope.launch {
-            for (attackDef in attacks) {
-                // Run one-by-one
-                val result: AttackResult = orchestrator.runAttack(context, attackDef)
-                // You could optionally emit the simulation result (Pass/Error)
-                // to a separate flow here.
+            orchestrator.runAttacks(context, attacks).collect { result ->
+                //TODO Handle results
             }
         }
     }
@@ -60,7 +55,7 @@ class RaspEvalProvider(
      * @return A Flow that emits the list of all correlated attack/threat pairs.
      */
     fun getCorrelationResults(): Flow<List<CorrelatedThreat>> {
-        return database.raspEvalDao().getCorrelatedThreats()
+        return database.raspDao().getCorrelatedThreats()
     }
 
     /**

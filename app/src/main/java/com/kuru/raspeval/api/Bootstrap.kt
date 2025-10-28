@@ -1,6 +1,11 @@
-package com.kuru.raspeval.core
+package com.kuru.raspeval.api
 
 import android.content.Context
+import com.kuru.raspeval.core.AttackOrchestrator
+import com.kuru.raspeval.core.EvalDomainEntity
+import com.kuru.raspeval.core.RaspEvalDatabase
+import com.kuru.raspeval.core.ThreatEntity
+import com.kuru.raspeval.core.ThreatEventStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -9,9 +14,9 @@ import kotlinx.coroutines.launch
 
 /**
  * Main entry point for the RASP Eval library.
- * The consuming app must call [init] before using the [RaspEvalProvider].
+ * The consuming app must call [init] before using the [EvalProvider].
  */
-object RaspEvalBootstrap {
+object Bootstrap {
 
     // This internal scope is for framework-level background tasks,
     // like subscribing to the threat stream.
@@ -28,7 +33,7 @@ object RaspEvalBootstrap {
         }
 
         // 1. Build and store the database instance
-        val db = RaspEvalDatabase.build(context.applicationContext)
+        val db = RaspEvalDatabase.getInstance(context.applicationContext)
         EvalDomainEntity.database = db
 
         // 2. Create and store the event stream
@@ -43,7 +48,7 @@ object RaspEvalBootstrap {
         // This is the logic that was previously in RASPInitProvider
         EvalDomainEntity.threatSubscriberJob = frameworkScope.launch {
             stream.threatJsonFlow.collect { json ->
-                db.raspEvalDao().insertThreat(ThreatEntity(threatJson = json))
+                db.raspDao().insertThreat(ThreatEntity(threatJson = json))
             }
         }
     }

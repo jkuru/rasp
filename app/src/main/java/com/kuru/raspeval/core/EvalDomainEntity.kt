@@ -5,7 +5,7 @@ import java.lang.IllegalStateException
 
 /**
  * Singleton object that holds the state of the RaspEval framework.
- * This is populated by [RaspEvalBootstrap.init] and is for internal use.
+ * This is populated by [com.kuru.raspeval.api.Bootstrap.init] and is for internal use.
  */
 internal object EvalDomainEntity {
     @Volatile
