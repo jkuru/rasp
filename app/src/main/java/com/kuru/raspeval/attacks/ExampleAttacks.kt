@@ -10,7 +10,8 @@ import java.io.File
 
 /**
  * A collection of sample attack definitions.
- * The consuming app can create a list of these to pass to [RaspEvalProvider.initiateAttacks].
+ * The consuming app can create a list of these to pass to [com.kuru.raspeval.api.RaspEval]
+ * via [com.kuru.raspeval.api.EvalProvider.initiateAttacks].
  */
 object ExampleAttacks {
 

@@ -6,29 +6,62 @@ package com.kuru.raspeval.core
  * and provides the JNI-to-Rust function calls for all native attacks.
  */
 object NativeAttackHarness {
-    // Load the Rust 'attack' library
-    init {
+    private val libraryLoader = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         System.loadLibrary("rasp_attack_harness")
-        nativeInit() // Initialize the native logger
+        nativeInit()
+    }
+
+    private fun ensureLoaded() {
+        runCatching { libraryLoader.value }
+            .getOrElse { throwable ->
+                throw IllegalStateException(
+                    "Failed to load rasp_attack_harness native library.",
+                    throwable
+                )
+            }
     }
 
     // JNI function to init native logger
     @JvmStatic
-    external fun nativeInit()
+    private external fun nativeInit()
 
     // Test #3: Zygote/Ptrace
     @JvmStatic
-    external fun attemptPtrace(pid: Int): Int
+    fun attemptPtrace(pid: Int): Int {
+        ensureLoaded()
+        return nativeAttemptPtrace(pid)
+    }
 
     // Test #55: Low-Level Native Call Interception
     @JvmStatic
-    external fun attemptGotHook(libName: String, symbolName: String): Int
+    fun attemptGotHook(libName: String, symbolName: String): Int {
+        ensureLoaded()
+        return nativeAttemptGotHook(libName, symbolName)
+    }
 
     // Test #13: Runtime Code Injection Halt
     @JvmStatic
-    external fun triggerNativeMemoryWrite(address: Long): Int
+    fun triggerNativeMemoryWrite(address: Long): Int {
+        ensureLoaded()
+        return nativeTriggerNativeMemoryWrite(address)
+    }
 
     // Test #4: Frida/Xposed Detection
     @JvmStatic
-    external fun isFridaXposedDetected(): Boolean
+    fun isFridaXposedDetected(): Boolean {
+        ensureLoaded()
+        return nativeIsFridaXposedDetected()
+    }
+
+    @JvmStatic
+    private external fun nativeAttemptPtrace(pid: Int): Int
+
+    @JvmStatic
+    private external fun nativeAttemptGotHook(libName: String, symbolName: String): Int
+
+    @JvmStatic
+    private external fun nativeTriggerNativeMemoryWrite(address: Long): Int
+
+    @JvmStatic
+    private external fun nativeIsFridaXposedDetected(): Boolean
 }

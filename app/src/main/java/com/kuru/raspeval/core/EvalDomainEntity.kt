@@ -10,27 +10,52 @@ import java.lang.IllegalStateException
 internal object EvalDomainEntity {
     @Volatile
     internal var database: RaspEvalDatabase? = null
+        private set
     @Volatile
     internal var threatStream: ThreatEventStream? = null
+        private set
     @Volatile
     internal var orchestrator: AttackOrchestrator? = null
+        private set
     @Volatile
     internal var threatSubscriberJob: Job? = null
+        private set
+
+    @Synchronized
+    internal fun install(
+        database: RaspEvalDatabase,
+        stream: ThreatEventStream,
+        orchestrator: AttackOrchestrator,
+        subscriberJob: Job
+    ) {
+        this.database = database
+        this.threatStream = stream
+        this.orchestrator = orchestrator
+        this.threatSubscriberJob = subscriberJob
+    }
+
+    @Synchronized
+    internal fun clear() {
+        database = null
+        threatStream = null
+        orchestrator = null
+        threatSubscriberJob = null
+    }
 
     // --- Safe Getters for internal components ---
 
     internal fun getDb(): RaspEvalDatabase =
         database ?: throw IllegalStateException(
-            "RaspEvalBootstrap.init() must be called before accessing the database."
+            "RaspEval.init() must be called before accessing the database."
         )
 
     internal fun getStream(): ThreatEventStream =
         threatStream ?: throw IllegalStateException(
-            "RaspEvalBootstrap.init() must be called before accessing the threat stream."
+            "RaspEval.init() must be called before accessing the threat stream."
         )
 
     internal fun getOrchestrator(): AttackOrchestrator =
         orchestrator ?: throw IllegalStateException(
-            "RaspEvalBootstrap.init() must be called before accessing the orchestrator."
+            "RaspEval.init() must be called before accessing the orchestrator."
         )
 }

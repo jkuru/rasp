@@ -9,12 +9,15 @@ import kotlinx.serialization.json.Json
  * Replaces RASPThreatPubSub.
  */
 internal object ThreatEventStream {
-    private val _threatJsonFlow = MutableSharedFlow<String>(replay = 1)
+    private val _threatJsonFlow = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 64
+    )
     val threatJsonFlow = _threatJsonFlow.asSharedFlow()
 
     /**
      * Publishes a threat as JSON string.
-     * Called by the RaspEvalProvider.
+     * Called by the [com.kuru.raspeval.api.EvalProvider].
      */
     suspend fun publish(json: String) {
         _threatJsonFlow.emit(json)

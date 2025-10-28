@@ -2,15 +2,19 @@ package com.kuru.raspeval.core
 
 import android.content.Context
 import com.kuru.raspeval.attacks.AttackDefinition
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 
 /**
  * Internal class that handles the logic of running attack simulations
  * and recording them in the database.
  *
  * It is instantiated by [com.kuru.raspeval.api.Bootstrap] and stored in [EvalDomainEntity].
- * It is used by the [com.kuru.raspeval.RaspEvalProvider].
+ * It is used by the [com.kuru.raspeval.api.EvalProvider].
  */
 internal class AttackOrchestrator {
 
@@ -29,14 +33,13 @@ internal class AttackOrchestrator {
     fun runAttacks(
         context: Context,
         attacks: List<AttackDefinition>
-    ): Flow<AttackResult> = flow {
-        // Iterate over the list of attacks
-        for (attackDef in attacks) {
-            // Run the single attack logic and emit its result
-            val result = runSingleAttack(context, attackDef)
-            emit(result)
-        }
-    }
+    ): Flow<AttackResult> =
+        flow {
+            for (attackDef in attacks) {
+                val result = runSingleAttack(context, attackDef)
+                emit(result)
+            }
+        }.flowOn(Dispatchers.IO)
 
     /**
      * Wraps a single attack lambda with database logging (start/end).
@@ -45,13 +48,12 @@ internal class AttackOrchestrator {
     private suspend fun runSingleAttack(
         context: Context,
         attackDef: AttackDefinition
-    ): AttackResult {
+    ): AttackResult = withContext(Dispatchers.IO) {
         val requirement = attackDef.requirement
         val attackId = requirement.id
         val startTime = System.currentTimeMillis() / 1000
 
         try {
-            // 1. Record attack start
             dao.insertAttack(
                 AttackEntity(
                     id = attackId,
@@ -60,18 +62,14 @@ internal class AttackOrchestrator {
                 )
             )
 
-            // 2. Execute pure attack lambda
             attackDef.attack(context)
 
-            // 3. Return Pass if the lambda didn't crash
-            return AttackResult.Pass("Attack simulation finished.")
-
+            AttackResult.Pass("Attack simulation finished.")
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
-            // 3b. Return Error if the lambda crashed
-            return AttackResult.Error(e)
-
+            AttackResult.Error(e)
         } finally {
-            // 4. Record attack end time (always)
             val endTime = System.currentTimeMillis() / 1000
             dao.updateAttack(
                 AttackEntity(
@@ -82,8 +80,6 @@ internal class AttackOrchestrator {
                 )
             )
 
-            // 5. Perform generic cleanup (from your original file)
-            // TODO: This should be moved to a specific cleanup lambda in the AttackDefinition
             context.getDir("attack_malware", Context.MODE_PRIVATE)
                 .deleteRecursively()
         }

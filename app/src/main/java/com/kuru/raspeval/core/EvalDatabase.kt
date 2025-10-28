@@ -45,9 +45,9 @@ interface RaspEvalDao { // Renamed from RaspDao
 
     // Reactive query for correlated threats (joins attacks and threats via time window)
     @Query("""
-        SELECT a.id AS attack_id, t.threat_json
+        SELECT a.id AS attackId, t.threatJson
         FROM attacks a
-        LEFT JOIN threats t ON t.timestamp BETWEEN a.startTimestamp AND COALESCE(a.endTimestamp, a.startTimestamp + 60)  -- 60s post-attack window
+        LEFT JOIN threats t ON t.timestamp BETWEEN a.startTimestamp AND COALESCE(a.endTimestamp, a.startTimestamp + 60)
         ORDER BY a.startTimestamp DESC
     """)
     fun getCorrelatedThreats(): Flow<List<CorrelatedThreat>>  // Flow for reactive streaming

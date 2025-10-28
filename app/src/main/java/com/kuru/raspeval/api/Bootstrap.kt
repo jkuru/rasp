@@ -1,55 +1,80 @@
 package com.kuru.raspeval.api
 
 import android.content.Context
+import android.util.Log
 import com.kuru.raspeval.core.AttackOrchestrator
 import com.kuru.raspeval.core.EvalDomainEntity
 import com.kuru.raspeval.core.RaspEvalDatabase
 import com.kuru.raspeval.core.ThreatEntity
 import com.kuru.raspeval.core.ThreatEventStream
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 /**
  * Main entry point for the RASP Eval library.
  * The consuming app must call [init] before using the [EvalProvider].
  */
-object Bootstrap {
+internal object Bootstrap {
 
-    // This internal scope is for framework-level background tasks,
-    // like subscribing to the threat stream.
-    private val frameworkScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private const val TAG = "RaspEval"
+    private const val RETRY_DELAY_MILLIS = 1_000L
+
+    private val scopeLock = Any()
+    @Volatile
+    private var frameworkScope: CoroutineScope? = null
+
+    private fun createFrameworkScope(): CoroutineScope =
+        CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private fun currentScope(): CoroutineScope {
+        val existing = frameworkScope
+        val isActive = existing?.coroutineContext?.job?.isActive == true
+        if (isActive && existing != null) {
+            return existing
+        }
+        return createFrameworkScope().also { frameworkScope = it }
+    }
 
     /**
      * Initializes all RASP Eval services.
      * This must be called once (e.g., in the Application's onCreate).
      */
     fun init(context: Context) {
-        // Prevent double-initialization
-        if (EvalDomainEntity.database != null) {
-            return
-        }
-
-        // 1. Build and store the database instance
-        val db = RaspEvalDatabase.getInstance(context.applicationContext)
-        EvalDomainEntity.database = db
-
-        // 2. Create and store the event stream
-        val stream = ThreatEventStream
-        EvalDomainEntity.threatStream = stream
-
-        // 3. Create and store the orchestrator
-        val orchestrator = AttackOrchestrator()
-        EvalDomainEntity.orchestrator = orchestrator
-
-        // 4. Start the database subscriber
-        // This is the logic that was previously in RASPInitProvider
-        EvalDomainEntity.threatSubscriberJob = frameworkScope.launch {
-            stream.threatJsonFlow.collect { json ->
-                db.raspDao().insertThreat(ThreatEntity(threatJson = json))
+        synchronized(scopeLock) {
+            if (EvalDomainEntity.database != null) {
+                return
             }
+
+            val db = RaspEvalDatabase.getInstance(context.applicationContext)
+            val stream = ThreatEventStream
+            val orchestrator = AttackOrchestrator()
+            val scope = currentScope()
+
+            val subscriberJob = scope.launch {
+                while (isActive) {
+                    try {
+                        stream.threatJsonFlow.collect { json ->
+                            db.raspDao().insertThreat(ThreatEntity(threatJson = json))
+                        }
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (throwable: Throwable) {
+                        Log.e(TAG, "Threat ingestion failed, retrying", throwable)
+                        delay(RETRY_DELAY_MILLIS)
+                    }
+                }
+            }
+
+            EvalDomainEntity.install(db, stream, orchestrator, subscriberJob)
+
+            Log.i(TAG, "RaspEval bootstrap complete")
         }
     }
 
@@ -57,16 +82,13 @@ object Bootstrap {
      * Shuts down all framework services and clears state.
      */
     fun shutdown() {
-        // 1. Stop the database subscriber job
-        EvalDomainEntity.threatSubscriberJob?.cancel()
+        synchronized(scopeLock) {
+            EvalDomainEntity.threatSubscriberJob?.cancel()
+            frameworkScope?.cancel()
+            frameworkScope = null
+            EvalDomainEntity.clear()
 
-        // 2. Cancel all other framework tasks
-        frameworkScope.cancel()
-
-        // 3. Clear all state
-        EvalDomainEntity.database = null
-        EvalDomainEntity.threatStream = null
-        EvalDomainEntity.orchestrator = null
-        EvalDomainEntity.threatSubscriberJob = null
+            Log.i(TAG, "RaspEval shutdown complete")
+        }
     }
 }
