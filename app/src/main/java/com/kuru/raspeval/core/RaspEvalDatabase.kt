@@ -30,7 +30,7 @@ data class ThreatEntity(
 
 
 @Dao
-interface RaspDao {
+interface RaspEvalDao { // Renamed from RaspDao
     // Insert attack start
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAttack(attack: AttackEntity)
@@ -58,18 +58,18 @@ data class CorrelatedThreat(val attackId: String, val threatJson: String?)
 
 
 @Database(entities = [AttackEntity::class, ThreatEntity::class], version = 1, exportSchema = false)
-abstract class RaspDatabase : RoomDatabase() {
-    abstract fun raspDao(): RaspDao
+abstract class RaspEvalDatabase : RoomDatabase() { // Renamed from RaspDatabase
+    abstract fun raspDao(): RaspEvalDao // Renamed from raspDao
 
     companion object {
-        @Volatile private var INSTANCE: RaspDatabase? = null
+        @Volatile private var INSTANCE: RaspEvalDatabase? = null
 
-        fun getInstance(context: Context): RaspDatabase {
+        fun getInstance(context: Context): RaspEvalDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: androidx.room.Room.databaseBuilder(
                     context.applicationContext,
-                    RaspDatabase::class.java,
-                    "rasp_threats.db"
+                    RaspEvalDatabase::class.java, // Renamed
+                    "raspeval_threats.db" // Renamed
                 ).build().also { INSTANCE = it }
             }
         }
@@ -78,7 +78,7 @@ abstract class RaspDatabase : RoomDatabase() {
 
 // Stream correlated threats reactively
 fun streamCorrelatedThreats(context: Context): Flow<List<CorrelatedThreat>> {
-    val dao = RaspDatabase.getInstance(context).raspDao()
+    val dao = RaspEvalDatabase.getInstance(context).raspDao() // Renamed
     return dao.getCorrelatedThreats()
 }
 

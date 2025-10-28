@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * Generic data class for threats, vendor-agnostic (dev-only).
  */
 @Serializable
-data class RASPThreat(
+data class Threat(
     val id: Int,
     val name: String,
     val severity: String,

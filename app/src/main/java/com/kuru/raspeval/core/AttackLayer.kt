@@ -1,6 +1,6 @@
 package com.kuru.raspeval.core
 
-enum class RASPAttackLayer {
+enum class AttackLayer {
     NATIVE_HOOKING,
     RUNTIME_INSTRUMENTATION,
     SYSTEM_CALLS,

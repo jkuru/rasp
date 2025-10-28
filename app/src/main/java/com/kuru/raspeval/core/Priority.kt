@@ -1,5 +1,5 @@
 package com.kuru.raspeval.core
 
-enum class RASPPriority {
+enum class Priority {
     P0, P1, P2, P3
 }
